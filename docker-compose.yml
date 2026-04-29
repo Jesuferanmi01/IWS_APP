@@ -1,0 +1,31 @@
+services:
+  IWSSIDECAR:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: IWSSIDECAR_sql_server
+    environment:
+      - ACCEPT_EULA=Y
+      - MSSQL_SA_PASSWORD=StrongPassword@123
+      - MSSQL_PID=Express
+      - MSSQL_DB=IWSDB
+    ports:
+      - "1412:1433"
+    volumes:
+      - sqlserver_data:/var/opt/mssql
+    entrypoint:
+      - /bin/bash
+      - -c
+      - |
+        /opt/mssql/bin/sqlservr &
+        SQL_PID=$!
+        echo "Waiting for SQL Server..."
+        until /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "StrongPassword@123" -Q "SELECT 1" -C -b > /dev/null 2>&1; do
+          echo "Not ready yet, retrying..."
+          sleep 3
+        done
+        echo "Creating IWSDB database..."
+        /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "StrongPassword@123" -C -Q "IF DB_ID('IWSDB') IS NULL CREATE DATABASE IWSDB;"
+        echo "Done."
+        wait $SQL_PID
+
+volumes:
+  sqlserver_data:

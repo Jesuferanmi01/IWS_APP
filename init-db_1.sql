@@ -1,0 +1,12 @@
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = 'IWSDB')
+    BEGIN
+        CREATE DATABASE IWSDB;
+    END
+GO
+
+USE IWSDB;
+GO
+
+
+
+
