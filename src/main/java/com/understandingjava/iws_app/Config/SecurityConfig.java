@@ -26,12 +26,15 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(requests -> requests
 
-                        // ── Auth endpoints — public ───────────────────────
+
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
-                                "/api/admin/transactions",
-                                "/api/admin/logs"
+                                "/api/ISW/detect",
+                                "/api/ISW/verify"
+                         //       "/api/admin/transactions",
+                         //       "/api/admin/logs"
+
                         ).permitAll()
 
                         // ── Swagger UI — must be public or it returns 403 ─

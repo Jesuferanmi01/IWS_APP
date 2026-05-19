@@ -12,9 +12,11 @@ public class RateLimiterRepo {
 
     private final ConcurrentHashMap<String, Deque<Instant>> store = new ConcurrentHashMap<>();
 
-    public int recordAndCount(String ip, long windowSeconds) {
+    public int recordAndCount(String userId, String ip, long windowSeconds) {
         Instant now    = Instant.now();
         Instant cutoff = now.minusSeconds(windowSeconds);
+
+        String key = userId + ":" + ip;
 
         Deque<Instant> hits = store.computeIfAbsent(ip, k -> new ArrayDeque<>());
 

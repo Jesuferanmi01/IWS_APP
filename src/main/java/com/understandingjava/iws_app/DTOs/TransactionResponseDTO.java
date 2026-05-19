@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 public class TransactionResponseDTO {
 
     private String transRef;
-    private String userCode;
+    //private String userCode;
     private BigDecimal amount;
     private String  status;
     private String cardNo;

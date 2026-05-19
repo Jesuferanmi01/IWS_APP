@@ -1,6 +1,8 @@
 package com.understandingjava.iws_app.Repos;
 
 import com.understandingjava.iws_app.Models.IpAddress;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -29,6 +31,11 @@ public interface IpAddressRepo extends JpaRepository<IpAddress, Integer> {
         """, nativeQuery = true)
     void upsertFlagged(@Param("ip") String ip);
 
+//    List<IpAddress> findByIsFlaggedTrue();
+
+    Page<IpAddress> findByIsFlaggedTrue(Pageable pageable);
+
+    // Keep the non-paginated version only if used elsewhere (e.g. CacheService)
     List<IpAddress> findByIsFlaggedTrue();
 
 }

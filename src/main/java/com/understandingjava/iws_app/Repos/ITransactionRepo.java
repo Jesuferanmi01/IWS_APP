@@ -13,17 +13,19 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 @Repository
-public interface ITransactionRepo extends JpaRepository<Transactions, UUID> {
-    //double getAverageAmount(String userCode);
-    @Query("SELECT AVG(t.amount) FROM Transactions t WHERE t.userCode = :userCode")
-    Double getAverageAmount(@Param("userCode") String userCode);
+    public interface ITransactionRepo extends JpaRepository<Transactions, UUID> {
+        //double getAverageAmount(String userCode);
+        @Query("SELECT AVG(t.amount) FROM Transactions t WHERE t.userCode = :userCode")
+        Double getAverageAmount(@Param("userCode") String userCode);
 
-    long countByUserCodeAndCreatedAtGreaterThanEqual(String userCode, LocalDateTime since);
+        long countByUserCodeAndCreatedAtGreaterThanEqual(String userCode, LocalDateTime since);
 
-    @Query(value = "SELECT COUNT(*) FROM transactions", nativeQuery = true)
-    long countAllTransactions();
+        long countByMerchantCodeAndCreatedAtGreaterThanEqual(String merchantCode, LocalDateTime since);
 
-    boolean existsByIpAddressAndMerchantCode(String ipAddress, String merchantCode);
+        @Query(value = "SELECT COUNT(*) FROM transactions", nativeQuery = true)
+        long countAllTransactions();
+
+        boolean existsByIpAddressAndMerchantCode(String ipAddress, String merchantCode);
 
     long countByMerchantCodeAndStatusIn(String merchantCode, List<String> statusList);
 
@@ -44,7 +46,6 @@ public interface ITransactionRepo extends JpaRepository<Transactions, UUID> {
             @Param("transRef")      String     transRef
     );
 
-    // ── Supporting queries ────────────────────────────────────────────────────
 
     @Query(value = """
             SELECT COUNT(*) FROM  WHERE  merchant_Code = :merchantCode AND   status    IN ('FLAGGED', 'BLACKLISTED')      """, nativeQuery = true)
@@ -56,9 +57,21 @@ public interface ITransactionRepo extends JpaRepository<Transactions, UUID> {
 
 
 
-    @Query(value = "SELECT * FROM transactions " +
-            "WHERE trans_ref = :transRef AND user_code = :userCode " +
-            "AND status IN ('FLAGGED', 'BLACKLISTED')", nativeQuery = true)
-    Transactions findFlaggedTransaction(@Param("transRef") String transRef,
-                                       @Param("userCode") String userCode);
+//    @Query(value = "SELECT * FROM transactions " +
+//            "WHERE trans_ref = :transRef AND user_code = :userCode " +
+//            "AND status IN ('FLAGGED', 'BLACKLISTED')", nativeQuery = true)
+//    Transactions findFlaggedTransaction(@Param("transRef") String transRef,
+//                                       @Param("userCode") String userCode);
+
+    @Query(value = """
+        SELECT *
+        FROM transactions
+        WHERE trans_ref = :transRef
+          AND token = :otp
+          AND status IN ('FLAGGED', 'BLACKLISTED')
+        """, nativeQuery = true)
+    Transactions findFlaggedTransaction(
+            @Param("transRef") String transRef,
+            @Param("otp") String otp
+    );
 }

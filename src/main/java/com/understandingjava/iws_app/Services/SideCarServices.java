@@ -29,15 +29,15 @@ public class SideCarServices {
     private final ITransactionRepo transactionRepo;
     private final AuthHelpersServices authHelpers;
 
-    private static final int FRAUD_THRESHOLD = 50;
+    private static final int FRAUD_THRESHOLD = 65;
 
 
     @Logged(service = "SIDECAR")
     public DetectResponseDTO isFraudulent(DetectRequestDto request) {
 
-        log.event("SIDECAR", "isFraudulent — started", request.getMerchantCode(), request.getIpAddress());
+        //log.event("SIDECAR", "isFraudulent — started", request.getMerchantCode(), request.getIpAddress());
 
-        rateLimiter.rateLimiter(request.getIpAddress());
+       rateLimiter.rateLimiter(request.getIpAddress(), request.getMerchantCode());
 
         if (cacheService.isBlacklisted(request.getMerchantCode())) {
             throw new CustomException.ValidationException("Merchant is blacklisted");
@@ -80,28 +80,22 @@ public class SideCarServices {
         }
     }
 
-    public DetectResponseDTO verify(VerifyRequestDTO request, String jwtToken) {
-        // log.info("[SIDECAR] OTP verification — transRef={}", request.getTransRef());
+    public DetectResponseDTO verify(VerifyRequestDTO request) {
 
-        String userCode = extractUserCodeFromToken(jwtToken);
+        Transactions transaction = transactionRepo.findFlaggedTransaction(
+                request.getTransRef(),
+                request.getOtp()
+        );
 
-
-        Transactions transaction = transactionRepo.findFlaggedTransaction(request.getTransRef(), userCode);
         if (transaction == null) {
-            throw new CustomException.NotFoundException(
-                    "No flagged transaction found for transRef '" + request.getTransRef() + "'.");
-        }
-
-
-        if (!request.getOtp().equals(transaction.getToken())) {
-            //   log.warn("[SIDECAR] Invalid OTP for transRef={}", request.getTransRef());
             throw new CustomException.ValidationException(
-                    "Invalid OTP. Please check and try again.");
+                    "Invalid transaction reference or OTP."
+            );
         }
 
-        // log.info("[SIDECAR] OTP validated — calling sp_verify_approve for transRef={}",request.getTransRef());
-
-        return jdbcRepo.verifyApprove(request.getTransRef(), userCode);
+        return jdbcRepo.verifyApprove(
+                request.getTransRef(), transaction.getUserCode()
+        );
     }
 
     private String extractUserCodeFromToken(String jwtToken) {

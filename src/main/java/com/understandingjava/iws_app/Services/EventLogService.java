@@ -11,35 +11,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-/**
- * EventLog — application-wide structured logging service.
- *
- * Provides two polymorphic families:
- *
- *   event(...)  — for domain/business events (fraud decision, OTP sent, rate-limit hit …)
- *   action(...) — for system/operational actions (DB call, validation step, JDBC call …)
- *
- * Both families are fully polymorphic (1–5 args) and always write through JDBC
- * via sp_insert_log so the hot path never throws — failures are swallowed and
- * printed to stderr so they never crash the main flow.
- *
- * Read operations go through JPA (ILogRepo) with DESC sort on createdAt.
- *
- * Usage in any service:
- *
- *   @Autowired / constructor-inject EventLog log;
- *
- *   log.event("FRAUD",  "Transaction flagged",  transRef, ip);
- *   log.action("RISK",  "IP score calculated",  ip, String.valueOf(score));
- *   log.action("JDBC",  "sp_flag_transaction called");
- */
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class EventLogService {
 
-    private final EventLogJdbcRepo logJdbcRepo;   // JDBC write path
-    private final IEventLogRepo logRepo;        // JPA read path
+    private final EventLogJdbcRepo logJdbcRepo;
+    private final IEventLogRepo logRepo;
 
     public void event(String service, String message) {
         persist(service, message, null, null, null);

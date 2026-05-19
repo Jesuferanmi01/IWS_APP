@@ -1,13 +1,17 @@
 package com.understandingjava.iws_app.Services;
 
+import com.understandingjava.iws_app.Models.IpAddress;
 import com.understandingjava.iws_app.Repos.ITransactionRepo;
 import com.understandingjava.iws_app.Repos.IUseRepo;
 import com.understandingjava.iws_app.Repos.IpAddressRepo;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 
+import java.sql.Time;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -15,40 +19,46 @@ import java.util.Set;
 @Service
 @RequiredArgsConstructor
 public class CacheService {
-    private final IpAddressRepo ipAddressRepo;
-    private final EventLogService log;
-    private final ITransactionRepo  transactionRepo;
-    private final IUseRepo repo;
+
+    private final IpAddressRepo    ipAddressRepo;
+    private final EventLogService  log;
+    private final ITransactionRepo transactionRepo;
+    private final IUseRepo         repo;
+
+
+    @Lazy
+    @Autowired
+    private CacheService self;
+
 
     @Cacheable("flaggedIps")
     public List<String> getFlaggedIps() {
-
         log.action("CACHE", "flaggedIps cache miss — loading from DB");
-
         return ipAddressRepo.findByIsFlaggedTrue()
                 .stream()
                 .map(ip -> ip.getIpAddress())
                 .toList();
     }
 
-    @CacheEvict(value = "flaggedIps", allEntries = true)
-    public void evict() {
-
-        log.action("CACHE", "flaggedIps cache evicted");
-    }
-
-    @Cacheable("flaggedIps")
     public boolean isFlagged(String ipAddress) {
-
-        return getFlaggedIps().contains(ipAddress);
+        return self.getFlaggedIps().contains(ipAddress); // ← self, not this
     }
+
 
     @Cacheable("blacklistedMerchants")
     public List<String> getBlacklistedMerchants() {
-
         log.action("CACHE", "blacklistedMerchants cache miss — loading from DB");
-
         return repo.findBlacklistedMerchantCodes();
+    }
+
+    public boolean isBlacklisted(String merchantCode) {
+        return self.getBlacklistedMerchants().contains(merchantCode);
+    }
+
+
+    @CacheEvict(value = "flaggedIps", allEntries = true)
+    public void evict() {
+        log.action("CACHE", "flaggedIps cache evicted");
     }
 
     @CacheEvict(value = {"flaggedIps", "blacklistedMerchants"}, allEntries = true)
@@ -56,15 +66,21 @@ public class CacheService {
         log.action("CACHE", "All caches evicted");
     }
 
-    @Cacheable("blacklistedMerchants")
-    public Set<String> setBlacklistedMerchants() {
-
-        log.action("CACHE", "blacklistedMerchants cache miss — loading from DB");
-
-        return new HashSet<>(repo.findBlacklistedMerchantCodes());
+    @Cacheable(value = "ipMerchantCheck", key = "#ip + '_' + #merchantCode")
+    public boolean isKnownIpMerchantPair(String ip, String merchantCode) {
+        return transactionRepo.existsByIpAddressAndMerchantCode(ip, merchantCode);
     }
 
-    public boolean isBlacklisted(String merchantCode) {
-        return getBlacklistedMerchants().contains(merchantCode);
+    @CacheEvict(value = "ipMerchantCheck", allEntries = true)
+    public void evictIpMerchantCache() {
+        log.action("CACHE", "ipMerchantCheck cache evicted");
+    }
+
+
+    @Cacheable(value = "ipTime", key = "#ip")
+    public Time getIpTime(String ip) {
+        return ipAddressRepo.findByIpAddress(ip)
+                .map(IpAddress::getTime)
+                .orElse(null);
     }
 }
